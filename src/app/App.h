@@ -6,6 +6,7 @@
 
 #include "app/AppChat.h"
 #include "app/AppFace.h"
+#include "app/AppIr.h"
 #include "app/AppSettings.h"
 #include "app/AppServer.h"
 #include "app/AppVoice.h"
@@ -17,12 +18,14 @@ public:
             std::shared_ptr<AppVoice> voice,
             std::shared_ptr<AppFace> face,
             std::shared_ptr<AppChat> chat,
-            std::shared_ptr<AppServer> server
+            std::shared_ptr<AppServer> server,
+            std::shared_ptr<AppIr> ir
     ) : _settings(std::move(settings)),
         _voice(std::move(voice)),
         _face(std::move(face)),
         _chat(std::move(chat)),
-        _server(std::move(server)) {};
+        _server(std::move(server)),
+        _ir(std::move(ir)) {};
 
     void setup();
 
@@ -34,10 +37,7 @@ private:
     std::shared_ptr<AppFace> _face;
     std::shared_ptr<AppChat> _chat;
     std::shared_ptr<AppServer> _server;
-
-    bool _isServoEnabled();
-
-    void _onTapCenter();
+    std::shared_ptr<AppIr> _ir;
 
     void _onButtonA();
 

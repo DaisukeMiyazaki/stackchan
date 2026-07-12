@@ -30,27 +30,27 @@ ChatGptClient::ChatGptClient(String apiKey, String model) : _apiKey(std::move(ap
 String ChatGptClient::chat(
         const String &text, const std::vector<String> &roles, const std::deque<String> &history,
         const std::function<void(const String &)> &onReceiveContent) {
-    DynamicJsonDocument requestDoc{CONTENT_MAX_SIZE};
-    DynamicJsonDocument responseDoc{CONTENT_MAX_SIZE};
+    JsonDocument requestDoc;
+    JsonDocument responseDoc;
     requestDoc["model"] = _model;
     if (onReceiveContent != nullptr) {
         requestDoc["stream"] = true;
     }
-    JsonArray messages = requestDoc.createNestedArray("messages");
+    JsonArray messages = requestDoc["messages"].to<JsonArray>();
     // Append roles to request parameters
     for (auto &&role: roles) {
-        JsonObject newMessage = messages.createNestedObject();
+        JsonObject newMessage = messages.add<JsonObject>();
         newMessage["role"] = "system";
         newMessage["content"] = role;
     }
     // Append chat history to request parameters
     for (int i = 0; i < history.size(); i++) {
-        JsonObject newMessage = messages.createNestedObject();
+        JsonObject newMessage = messages.add<JsonObject>();
         newMessage["role"] = (i % 2 == 0) ? "user" : "assistant";
         newMessage["content"] = history[i];
     }
     // Append question to request parameters
-    JsonObject newMessage = messages.createNestedObject();
+    JsonObject newMessage = messages.add<JsonObject>();
     newMessage["role"] = "user";
     newMessage["content"] = text;
 
@@ -81,8 +81,8 @@ String ChatGptClient::chat(
             Serial.printf("ERROR: Failed to deserialize JSON: %s\n", error.c_str());
             throw ChatGptClientError("Failed to deserialize JSON");
         }
-        auto content = responseDoc["choices"][0]["message"]["content"];
-        if (content == nullptr) {
+        JsonVariantConst content = responseDoc["choices"][0]["message"]["content"];
+        if (content.isNull()) {
             throw ChatGptClientError("No content");
         }
         return content.as<String>();

@@ -29,16 +29,6 @@ public:
 
     const char *getTimeNtpServer();
 
-    bool isServoEnabled();
-
-    std::pair<int, int> getServoPin();
-
-    bool getSwingEnabled();
-
-    std::pair<int, int> getSwingHome();
-
-    std::pair<int, int> getSwingRange();
-
     String getLang();
 
     uint8_t getVoiceVolume();

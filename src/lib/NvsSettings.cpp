@@ -61,7 +61,7 @@ static void mergeJsonObjects(JsonVariant dst, JsonVariantConst src) {
  * @return true: success, false: failure
  */
 bool NvsSettings::load(const String &text, bool merge) {
-    DynamicJsonDocument tmp{SETTINGS_MAX_SIZE};
+    JsonDocument tmp;
     bool result = deserializeJson(tmp, text) == DeserializationError::Ok;
     if (result) {
         if (merge) {
@@ -188,7 +188,7 @@ bool NvsSettings::add(const String &keyStr, const T &value) {
     auto key = keys[keys.size() - 1];
     auto val = _getParentOrCreate(keys);
     if (val[key].isNull()) {
-        val = val.createNestedArray(key);
+        val = val[key].to<JsonArray>();
     } else {
         val = val[key];
     }
@@ -215,7 +215,7 @@ bool NvsSettings::clear(const String &keyStr) {
     auto key = keys[keys.size() - 1];
     auto val = _getParentOrCreate(keys);
     if (val[key].isNull()) {
-        val = val.createNestedArray(key);
+        val = val[key].to<JsonArray>();
     } else {
         val = val[key];
     }
@@ -258,9 +258,9 @@ JsonVariant NvsSettings::_getParentOrCreate(std::vector<std::string> &keys) {
             if (val[keyNum].isNull()) {
                 if (std::all_of(nextKey.begin(), nextKey.end(), ::isdigit)) {
                     // create array when the next key is number
-                    val = val.createNestedArray(keyNum);
+                    val = val[keyNum].to<JsonArray>();
                 } else {
-                    val = val.createNestedObject(keyNum);
+                    val = val[keyNum].to<JsonObject>();
                 }
             } else {
                 val = val[keyNum];
@@ -270,9 +270,9 @@ JsonVariant NvsSettings::_getParentOrCreate(std::vector<std::string> &keys) {
             if (val[key].isNull()) {
                 if (std::all_of(nextKey.begin(), nextKey.end(), ::isdigit)) {
                     // create array when the next key is number
-                    val = val.createNestedArray(key);
+                    val = val[key].to<JsonArray>();
                 } else {
-                    val = val.createNestedObject(key);
+                    val = val[key].to<JsonObject>();
                 }
             } else {
                 val = val[key];

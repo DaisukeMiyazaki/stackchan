@@ -40,7 +40,7 @@ protected:
     String _nvsNamespace;
     String _nvsKey;
 
-    DynamicJsonDocument _settings{SETTINGS_MAX_SIZE};
+    JsonDocument _settings;
 
     JsonVariant _get(std::vector<std::string> &keys);
 

@@ -71,6 +71,7 @@ void App::setup() {
     _voice->setup();
     _face->setup();
     _chat->setup();
+    _ir->setup();
     _server->setup();
 
     // Start
@@ -79,7 +80,6 @@ void App::setup() {
     _chat->start();
 }
 
-static const Box boxCenter{120, 80, 80, 80};
 static const Box boxButtonA{0, 200, 106, 40};
 static const Box boxButtonB{106, 200, 108, 40};
 static const Box boxButtonC{214, 200, 106, 40};
@@ -89,7 +89,6 @@ void App::loop() {
     if (M5.Touch.getCount()) {
         auto t = M5.Touch.getDetail();
         if (t.wasPressed()) {
-            if (boxCenter.contain(t.x, t.y)) _onTapCenter();
             if (boxButtonA.contain(t.x, t.y)) _onButtonA();
             if (boxButtonB.contain(t.x, t.y)) _onButtonB();
             if (boxButtonC.contain(t.x, t.y)) _onButtonC();
@@ -103,20 +102,6 @@ void App::loop() {
     _face->loop();
 
     delay(50);
-}
-
-bool App::_isServoEnabled() {
-    return _settings->has("servo");
-}
-
-/**
- * Tap Center: Swing ON/OFF
- */
-void App::_onTapCenter() {
-    if (_isServoEnabled()) {
-        M5.Speaker.tone(1000, 100);
-        _face->toggleHeadSwing();
-    }
 }
 
 /**

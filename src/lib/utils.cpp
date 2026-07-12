@@ -3,12 +3,6 @@
 #include <Arduino.h>
 #include <ArduinoJson.h>
 
-String jsonEncode(const DynamicJsonDocument &jsonDoc) {
-    String jsonStr;
-    serializeJson(jsonDoc, jsonStr);
-    return jsonStr;
-}
-
 std::vector<std::string> splitString(
         const std::string &str, const std::string &delimiter, bool includeDelimiter = false) {
     std::vector<std::string> tokens;

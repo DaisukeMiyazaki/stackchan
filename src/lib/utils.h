@@ -5,7 +5,12 @@
 #include <vector>
 #include <ArduinoJson.h>
 
-String jsonEncode(const DynamicJsonDocument &jsonDoc);
+template<class T>
+String jsonEncode(const T &json) {
+    String jsonStr;
+    serializeJson(json, jsonStr);
+    return jsonStr;
+}
 
 std::vector<std::string> splitString(
         const std::string &str, const std::string &delimiter, bool includeDelimiter = false);

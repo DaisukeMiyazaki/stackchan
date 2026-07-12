@@ -3,9 +3,6 @@
 
 #if !defined(WITHOUT_AVATAR)
 #include <Avatar.h>
-#define SUPPRESS_HPP_WARNING
-#include <ServoEasing.h>
-#undef SUPPRESS_HPP_WARNING
 #endif // !defined(WITHOUT_AVATAR)
 
 #include "app/AppSettings.h"
@@ -38,13 +35,9 @@ public:
 
     void lipSync(void *args);
 
-    void servo(void *args);
-
     void setText(const char *text);
 
     bool setExpression(Expression expression);
-
-    void toggleHeadSwing();
 
 private:
     std::shared_ptr<AppSettings> _settings;
@@ -53,15 +46,6 @@ private:
 #if !defined(WITHOUT_AVATAR)
     /// M5Stack-Avatar https://github.com/meganetaaan/m5stack-avatar
     m5avatar::Avatar _avatar;
-
-    /// servo to swing head
-    ServoEasing _servoX, _servoY;
-
-    /// Swing parameters
-    int _homeX, _homeY, _rangeX, _rangeY;
-
-    /// head swing mode
-    bool _headSwing;
 
     /// last time of get battery status
     unsigned long _lastBatteryStatus = 0;

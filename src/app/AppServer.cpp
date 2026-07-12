@@ -3,6 +3,7 @@
 
 #include "app/AppChat.h"
 #include "app/AppFace.h"
+#include "app/AppIr.h"
 #include "app/AppServer.h"
 #include "app/AppVoice.h"
 #include "lib/utils.h"
@@ -20,6 +21,9 @@ void AppServer::setup() {
     _httpServer.on("/role_set", HTTP_POST, [&] { _onRoleSet(); });
     _httpServer.on("/setting", [&] { _onSetting(); });
     _httpServer.on("/settings", [&] { _onSettings(); });
+    _httpServer.on("/ir/learn", [&] { _onIrLearn(); });
+    _httpServer.on("/ir/send", [&] { _onIrSend(); });
+    _httpServer.on("/ir/codes", HTTP_GET, [&] { _onIrCodes(); });
     _httpServer.onNotFound([&] { _onNotFound(); });
     _httpServer.begin();
 }
@@ -87,8 +91,8 @@ void AppServer::_onApikeySet() {
 }
 
 void AppServer::_onRoleGet() {
-    DynamicJsonDocument result(4 * 1024);
-    result.createNestedArray("roles");
+    JsonDocument result;
+    result["roles"].to<JsonArray>();
     for (const auto &role: _settings->getChatRoles()) {
         result["roles"].add(role);
     }
@@ -157,6 +161,38 @@ void AppServer::_onSettings() {
     } else {
         _httpServer.send(200, "application/json", settings);
     }
+}
+
+void AppServer::_onIrLearn() {
+    auto name = _httpServer.arg("name");
+    if (name.isEmpty()) {
+        _httpServer.send(400, "text/plain", "name required");
+        return;
+    }
+    // 学習待ち中はリモコンをユニットに向けてボタンを押してもらう
+    if (_ir->learn(name)) {
+        _httpServer.send(200, "text/plain", "OK");
+    } else {
+        _httpServer.send(408, "text/plain", "no IR signal received");
+    }
+}
+
+void AppServer::_onIrSend() {
+    auto name = _httpServer.arg("name");
+    if (_ir->send(name)) {
+        _httpServer.send(200, "text/plain", "OK");
+    } else {
+        _httpServer.send(404, "text/plain", "unknown code name");
+    }
+}
+
+void AppServer::_onIrCodes() {
+    JsonDocument result;
+    result["codes"].to<JsonArray>();
+    for (const auto &name: _ir->codeNames()) {
+        result["codes"].add(name);
+    }
+    _httpServer.send(200, "application/json", jsonEncode(result));
 }
 
 void AppServer::_onNotFound() {

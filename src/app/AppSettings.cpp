@@ -14,19 +14,6 @@ static const char *TIME_ZONE_DEFAULT = "JST-9";
 static const char *TIME_NTP_SERVER_KEY = "time.ntpServer";
 static const char *TIME_NTP_SERVER_DEFAULT = "ntp.nict.jp";
 
-static const char *SERVO_KEY = "servo";
-static const char *SERVO_PIN_X_KEY = "servo.pin.x";
-static const char *SERVO_PIN_Y_KEY = "servo.pin.y";
-static const char *SWING_HOME_X_KEY = "swing.home.x";
-static const char *SWING_ENABLE_KEY = "swing.enable";
-static const int SWING_ENABLE_DEFAULT = true;
-static const int SWING_HOME_X_DEFAULT = 90;
-static const char *SWING_HOME_Y_KEY = "swing.home.y";
-static const int SWING_HOME_Y_DEFAULT = 80;
-static const char *SWING_RANGE_X_KEY = "swing.range.x";
-static const int SWING_RANGE_X_DEFAULT = 30;
-static const char *SWING_RANGE_Y_KEY = "swing.range.y";
-static const int SWING_RANGE_Y_DEFAULT = 20;
 
 static const char *VOICE_LANG_KEY = "voice.lang";
 static const char *VOICE_LANG_DEFAULT = "ja";
@@ -86,32 +73,6 @@ const char *AppSettings::getTimeZone() {
 
 const char *AppSettings::getTimeNtpServer() {
     return get(TIME_NTP_SERVER_KEY) | TIME_NTP_SERVER_DEFAULT;;
-}
-
-bool AppSettings::isServoEnabled() {
-    return has(SERVO_KEY);
-}
-
-std::pair<int, int> AppSettings::getServoPin() {
-    int servoPinX = get(SERVO_PIN_X_KEY);
-    int servoPinY = get(SERVO_PIN_Y_KEY);
-    return std::make_pair(servoPinX, servoPinY);
-}
-
-bool AppSettings::getSwingEnabled() {
-    return has(SWING_ENABLE_KEY) ? get(SWING_ENABLE_KEY) : SWING_ENABLE_DEFAULT;
-}
-
-std::pair<int, int> AppSettings::getSwingHome() {
-    int homeX = get(SWING_HOME_X_KEY) | SWING_HOME_X_DEFAULT;
-    int homeY = get(SWING_HOME_Y_KEY) | SWING_HOME_Y_DEFAULT;
-    return std::make_pair(homeX, homeY);
-}
-
-std::pair<int, int> AppSettings::getSwingRange() {
-    int homeX = get(SWING_RANGE_X_KEY) | SWING_RANGE_X_DEFAULT;
-    int homeY = get(SWING_RANGE_Y_KEY) | SWING_RANGE_Y_DEFAULT;
-    return std::make_pair(homeX, homeY);
 }
 
 String AppSettings::getLang() {

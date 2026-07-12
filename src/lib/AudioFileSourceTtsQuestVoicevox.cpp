@@ -79,7 +79,7 @@ bool AudioFileSourceTtsQuestVoicevox::open(const char *url) {
         return false;
     }
     auto response = _http.getString();
-    DynamicJsonDocument doc{CONTENT_MAX_SIZE};
+    JsonDocument doc;
     auto error = deserializeJson(doc, response.c_str());
     if (error != DeserializationError::Ok) {
         Serial.printf("ERROR: Failed to deserialize JSON: %s\n", error.c_str());
