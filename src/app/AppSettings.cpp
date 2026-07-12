@@ -47,6 +47,11 @@ static const char *WAKEWORD_ENABLED_KEY = "wakeword.enabled";
 static const bool WAKEWORD_ENABLED_DEFAULT = true;
 static const char *WAKEWORD_THRESHOLD_KEY = "wakeword.threshold";
 static const int WAKEWORD_THRESHOLD_DEFAULT = 120;
+static const char *WAKEWORD_MIC_GAIN_KEY = "wakeword.micGain";
+static const int WAKEWORD_MIC_GAIN_DEFAULT = 64;
+// 外付け PDM マイク (Port A 想定) のピン。未設定 (-1) なら内蔵マイク
+static const char *WAKEWORD_MIC_PIN_CLK_KEY = "wakeword.micPinClk";
+static const char *WAKEWORD_MIC_PIN_DATA_KEY = "wakeword.micPinData";
 
 bool AppSettings::init() {
     auto settings = sdLoadString(APP_SETTINGS_SD_PATH);
@@ -205,4 +210,16 @@ bool AppSettings::isWakeWordEnabled() {
 
 int AppSettings::getWakeWordThreshold() {
     return get(WAKEWORD_THRESHOLD_KEY) | WAKEWORD_THRESHOLD_DEFAULT;
+}
+
+uint8_t AppSettings::getWakeWordMicGain() {
+    return get(WAKEWORD_MIC_GAIN_KEY) | WAKEWORD_MIC_GAIN_DEFAULT;
+}
+
+int AppSettings::getWakeWordMicPinClk() {
+    return get(WAKEWORD_MIC_PIN_CLK_KEY) | -1;
+}
+
+int AppSettings::getWakeWordMicPinData() {
+    return get(WAKEWORD_MIC_PIN_DATA_KEY) | -1;
 }

@@ -31,6 +31,9 @@ public:
 
     int templateWords();
 
+    /// マイクの直近音量 (RMS, int16 振幅。マイク停止中は -1)
+    int micLevel();
+
 private:
     std::shared_ptr<AppSettings> _settings;
     std::shared_ptr<AppVoice> _voice;
@@ -47,6 +50,10 @@ private:
 
     /// 表情を戻す時刻 (0: 予約なし)
     unsigned long _resetFaceAt = 0;
+
+    /// 音量ログの最終出力時刻
+    unsigned long _lastLevelLog = 0;
+    float _maxRms = 0;
 
     void _loop();
 

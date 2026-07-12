@@ -1,3 +1,4 @@
+#include <algorithm>
 #include <Arduino.h>
 #include <M5Unified.h>
 
@@ -35,6 +36,14 @@ const char *AppWakeWord::registerWav(const uint8_t *data, size_t size, bool appe
     return error;
 }
 
+int AppWakeWord::micLevel() {
+    if (!_micActive) return -1;
+    xSemaphoreTake(_lock, portMAX_DELAY);
+    auto result = (int) _detector.lastRms();
+    xSemaphoreGive(_lock);
+    return result;
+}
+
 int AppWakeWord::templateWords() {
     xSemaphoreTake(_lock, portMAX_DELAY);
     auto result = _detector.templateWords();
@@ -45,6 +54,16 @@ int AppWakeWord::templateWords() {
 void AppWakeWord::_startMic() {
     if (_micActive) return;
     M5.Speaker.end();
+    auto cfg = M5.Mic.config();
+    cfg.magnification = _settings->getWakeWordMicGain();
+    // 外付け PDM マイクユニットが設定されていれば差し替える
+    int clk = _settings->getWakeWordMicPinClk();
+    int data = _settings->getWakeWordMicPinData();
+    if (clk >= 0 && data >= 0) {
+        cfg.pin_ws = clk;
+        cfg.pin_data_in = data;
+    }
+    M5.Mic.config(cfg);
     M5.Mic.begin();
     _micActive = true;
 }
@@ -75,7 +94,16 @@ void AppWakeWord::_loop() {
         while (M5.Mic.isRecording()) { delay(1); }
         xSemaphoreTake(_lock, portMAX_DELAY);
         int distance = _detector.feed(buf);
+        auto rms = _detector.lastRms();
         xSemaphoreGive(_lock);
+        // マイクが生きているか確認できるよう、5秒ごとに区間最大音量を出す
+        _maxRms = std::max(_maxRms, rms);
+        auto now = millis();
+        if (now - _lastLevelLog >= 5000) {
+            Serial.printf("wakeword: mic level=%d\n", (int) _maxRms);
+            _lastLevelLog = now;
+            _maxRms = 0;
+        }
         if (distance >= 0) {
             Serial.printf("wakeword: distance=%d (threshold=%d)\n",
                           distance, _settings->getWakeWordThreshold());

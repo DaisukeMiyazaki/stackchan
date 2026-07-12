@@ -84,6 +84,12 @@ public:
     bool isWakeWordEnabled();
 
     int getWakeWordThreshold();
+
+    uint8_t getWakeWordMicGain();
+
+    int getWakeWordMicPinClk();
+
+    int getWakeWordMicPinData();
 };
 
 #endif // !defined(APP_SETTINGS_H)

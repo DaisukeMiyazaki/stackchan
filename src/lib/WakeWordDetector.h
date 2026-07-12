@@ -36,6 +36,9 @@ public:
     /// 照合状態をクリアする (検出直後の再照合防止)
     void reset();
 
+    /// 直近フレームの音量 (RMS, int16 振幅)
+    float lastRms() { return _rms.empty() ? 0.0f : _rms.back(); }
+
 private:
     using Frame = std::array<float, NUM_COEFFS>;
 

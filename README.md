@@ -147,6 +147,9 @@ Here is the example of settings.
 
 - `wakeword.enabled` [boolean] : Enable wakeword detection (Default: `true`)
 - `wakeword.threshold` [int] : Detection threshold; smaller is stricter (Default: `120`)
+- `wakeword.micGain` [int] : Microphone amplification, 1-255 (Default: `64`)
+- `wakeword.micPinClk` / `wakeword.micPinData` [int] : Use an external PDM mic unit
+  on these pins instead of the builtin mic (e.g. Core2 Port A: clk=33, data=32)
 
 ## API
 

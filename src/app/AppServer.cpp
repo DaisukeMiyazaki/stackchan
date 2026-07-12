@@ -215,6 +215,7 @@ void AppServer::_onWakeWordStatus() {
     result["enabled"] = _settings->isWakeWordEnabled();
     result["threshold"] = _settings->getWakeWordThreshold();
     result["words"] = _wakeWord->templateWords();
+    result["micLevel"] = _wakeWord->micLevel();
     _httpServer.send(200, "application/json", jsonEncode(result));
 }
 
