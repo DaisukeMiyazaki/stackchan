@@ -78,6 +78,9 @@ bool connectNetwork(const char *ssid, const char *passphrase) {
             }
         }
     }
+    // 省電力(modem sleep)のままだとHTTPサーバーへの着信を取りこぼす
+    WiFi.setSleep(false);
+
     M5.Display.printf("Connected\nIP: %s\n", WiFi.localIP().toString().c_str());
     Serial.printf("Connected\nIP: %s\n", WiFi.localIP().toString().c_str());
 
