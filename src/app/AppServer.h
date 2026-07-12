@@ -79,6 +79,8 @@ private:
 
     void _onWakeWordStatus();
 
+    void _onWakeWordRec();
+
     void _onWakeWordRegister();
 
     void _onWakeWordUpload();

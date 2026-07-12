@@ -34,6 +34,15 @@ public:
     /// マイクの直近音量 (RMS, int16 振幅。マイク停止中は -1)
     int micLevel();
 
+    /// 直近5秒間の最大音量
+    int micPeak() { return (int) _lastPeak; }
+
+    /// 直近の照合距離 (10秒以上照合が無ければ -1)
+    int lastDistance();
+
+    /// マイクから PCM を録音する (AppServer から呼ばれる)。成功時 true
+    bool recordClip(int16_t *buf, size_t numSamples);
+
 private:
     std::shared_ptr<AppSettings> _settings;
     std::shared_ptr<AppVoice> _voice;
@@ -54,6 +63,18 @@ private:
     /// 音量ログの最終出力時刻
     unsigned long _lastLevelLog = 0;
     float _maxRms = 0;
+    float _lastPeak = 0;
+
+    /// 直近の照合結果
+    int _lastDistance = -1;
+    unsigned long _lastDistanceAt = 0;
+
+    /// 録音要求 (recordClip と待ち受けタスクの受け渡し)
+    volatile bool _captureRequested = false;
+    volatile bool _captureDone = false;
+    int16_t *_captureBuf = nullptr;
+    size_t _captureLen = 0;
+    size_t _capturePos = 0;
 
     void _loop();
 

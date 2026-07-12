@@ -1,3 +1,4 @@
+#include <algorithm>
 #include <Arduino.h>
 #include <ESP32WebServer.h>
 
@@ -26,6 +27,7 @@ void AppServer::setup() {
     _httpServer.on("/ir/send", [&] { _onIrSend(); });
     _httpServer.on("/ir/codes", HTTP_GET, [&] { _onIrCodes(); });
     _httpServer.on("/wakeword", HTTP_GET, [&] { _onWakeWordStatus(); });
+    _httpServer.on("/wakeword/rec", HTTP_GET, [&] { _onWakeWordRec(); });
     _httpServer.on("/wakeword/register", HTTP_POST,
                    [&] { _onWakeWordRegister(); }, [&] { _onWakeWordUpload(); });
     _httpServer.onNotFound([&] { _onNotFound(); });
@@ -216,6 +218,8 @@ void AppServer::_onWakeWordStatus() {
     result["threshold"] = _settings->getWakeWordThreshold();
     result["words"] = _wakeWord->templateWords();
     result["micLevel"] = _wakeWord->micLevel();
+    result["micPeak"] = _wakeWord->micPeak();
+    result["distance"] = _wakeWord->lastDistance();
     _httpServer.send(200, "application/json", jsonEncode(result));
 }
 
@@ -256,6 +260,52 @@ void AppServer::_onWakeWordRegister() {
     } else {
         _httpServer.send(200, "text/plain", "OK");
     }
+}
+
+/// 本体マイクで録音して WAV (16kHz/16bit/mono) を返す
+void AppServer::_onWakeWordRec() {
+    int ms = _httpServer.arg("ms").toInt();
+    if (ms <= 0) ms = 2500;
+    ms = std::min(ms, 10000);
+    size_t numSamples = (size_t) 16000 * ms / 1000;
+    size_t dataSize = numSamples * sizeof(int16_t);
+    auto *buf = (int16_t *) ps_malloc(dataSize);
+    if (buf == nullptr) {
+        _httpServer.send(503, "text/plain", "out of memory");
+        return;
+    }
+    if (!_wakeWord->recordClip(buf, numSamples)) {
+        free(buf);
+        _httpServer.send(503, "text/plain", "recording failed");
+        return;
+    }
+    uint8_t header[44];
+    memcpy(header, "RIFF", 4);
+    uint32_t v32 = 36 + dataSize;
+    memcpy(header + 4, &v32, 4);
+    memcpy(header + 8, "WAVEfmt ", 8);
+    v32 = 16;
+    memcpy(header + 16, &v32, 4);
+    uint16_t v16 = 1; // PCM
+    memcpy(header + 20, &v16, 2);
+    v16 = 1; // mono
+    memcpy(header + 22, &v16, 2);
+    v32 = 16000;
+    memcpy(header + 24, &v32, 4);
+    v32 = 16000 * 2;
+    memcpy(header + 28, &v32, 4);
+    v16 = 2;
+    memcpy(header + 32, &v16, 2);
+    v16 = 16;
+    memcpy(header + 34, &v16, 2);
+    memcpy(header + 36, "data", 4);
+    v32 = dataSize;
+    memcpy(header + 40, &v32, 4);
+    _httpServer.setContentLength(sizeof(header) + dataSize);
+    _httpServer.send(200, "audio/wav", "");
+    _httpServer.sendContent_P((PGM_P) header, sizeof(header));
+    _httpServer.sendContent_P((PGM_P) buf, dataSize);
+    free(buf);
 }
 
 void AppServer::_onNotFound() {

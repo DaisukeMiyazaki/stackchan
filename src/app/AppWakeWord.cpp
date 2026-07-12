@@ -44,6 +44,24 @@ int AppWakeWord::micLevel() {
     return result;
 }
 
+int AppWakeWord::lastDistance() {
+    if (_lastDistanceAt == 0 || millis() - _lastDistanceAt > 10000) return -1;
+    return _lastDistance;
+}
+
+bool AppWakeWord::recordClip(int16_t *buf, size_t numSamples) {
+    _captureBuf = buf;
+    _captureLen = numSamples;
+    _capturePos = 0;
+    _captureDone = false;
+    _captureRequested = true;
+    // 録音時間 + 余裕分だけ完了を待つ
+    unsigned long timeout = millis() + numSamples * 1000 / WakeWordDetector::SAMPLE_RATE + 5000;
+    while (!_captureDone && millis() < timeout) { delay(50); }
+    _captureRequested = false;
+    return _captureDone;
+}
+
 int AppWakeWord::templateWords() {
     xSemaphoreTake(_lock, portMAX_DELAY);
     auto result = _detector.templateWords();
@@ -82,7 +100,9 @@ void AppWakeWord::_loop() {
     }
 
     // 発話中 (または発話予定) はマイクを止めてスピーカーに譲る
-    if (!_settings->isWakeWordEnabled() || !_detector.hasTemplate() || _voice->isBusy()) {
+    bool wantDetect = _settings->isWakeWordEnabled() && _detector.hasTemplate() && !_voice->isBusy();
+    bool capturing = _captureRequested;
+    if (!wantDetect && !capturing) {
         _stopMic();
         delay(200);
         return;
@@ -92,6 +112,16 @@ void AppWakeWord::_loop() {
     static int16_t buf[WakeWordDetector::HOP_SIZE];
     if (M5.Mic.record(buf, WakeWordDetector::HOP_SIZE, WakeWordDetector::SAMPLE_RATE)) {
         while (M5.Mic.isRecording()) { delay(1); }
+        if (capturing) {
+            // 録音要求中は照合せず、要求元のバッファへ書き溜める
+            size_t n = std::min((size_t) WakeWordDetector::HOP_SIZE, _captureLen - _capturePos);
+            memcpy(_captureBuf + _capturePos, buf, n * sizeof(int16_t));
+            _capturePos += n;
+            if (_capturePos >= _captureLen) {
+                _captureDone = true;
+            }
+            return;
+        }
         xSemaphoreTake(_lock, portMAX_DELAY);
         int distance = _detector.feed(buf);
         auto rms = _detector.lastRms();
@@ -102,9 +132,12 @@ void AppWakeWord::_loop() {
         if (now - _lastLevelLog >= 5000) {
             Serial.printf("wakeword: mic level=%d\n", (int) _maxRms);
             _lastLevelLog = now;
+            _lastPeak = _maxRms;
             _maxRms = 0;
         }
         if (distance >= 0) {
+            _lastDistance = distance;
+            _lastDistanceAt = now;
             Serial.printf("wakeword: distance=%d (threshold=%d)\n",
                           distance, _settings->getWakeWordThreshold());
             if (distance <= _settings->getWakeWordThreshold()) {
