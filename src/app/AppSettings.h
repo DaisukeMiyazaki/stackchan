@@ -80,6 +80,10 @@ public:
     bool isClockSpeakEnabled();
 
     std::vector<int> getChatClockHours();
+
+    bool isWakeWordEnabled();
+
+    int getWakeWordThreshold();
 };
 
 #endif // !defined(APP_SETTINGS_H)

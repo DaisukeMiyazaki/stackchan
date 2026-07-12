@@ -21,9 +21,13 @@ void AppServer::setup() {
     _httpServer.on("/role_set", HTTP_POST, [&] { _onRoleSet(); });
     _httpServer.on("/setting", [&] { _onSetting(); });
     _httpServer.on("/settings", [&] { _onSettings(); });
+    _httpServer.on("/play", [&] { _onPlay(); });
     _httpServer.on("/ir/learn", [&] { _onIrLearn(); });
     _httpServer.on("/ir/send", [&] { _onIrSend(); });
     _httpServer.on("/ir/codes", HTTP_GET, [&] { _onIrCodes(); });
+    _httpServer.on("/wakeword", HTTP_GET, [&] { _onWakeWordStatus(); });
+    _httpServer.on("/wakeword/register", HTTP_POST,
+                   [&] { _onWakeWordRegister(); }, [&] { _onWakeWordUpload(); });
     _httpServer.onNotFound([&] { _onNotFound(); });
     _httpServer.begin();
 }
@@ -163,6 +167,17 @@ void AppServer::_onSettings() {
     }
 }
 
+void AppServer::_onPlay() {
+    auto url = _httpServer.arg("url");
+    if (url.isEmpty()) {
+        _httpServer.send(400, "text/plain", "url required");
+        return;
+    }
+    _voice->stopSpeak();
+    _voice->playUrl(url);
+    _httpServer.send(200, "text/plain", "OK");
+}
+
 void AppServer::_onIrLearn() {
     auto name = _httpServer.arg("name");
     if (name.isEmpty()) {
@@ -193,6 +208,52 @@ void AppServer::_onIrCodes() {
         result["codes"].add(name);
     }
     _httpServer.send(200, "application/json", jsonEncode(result));
+}
+
+void AppServer::_onWakeWordStatus() {
+    JsonDocument result;
+    result["enabled"] = _settings->isWakeWordEnabled();
+    result["threshold"] = _settings->getWakeWordThreshold();
+    result["templateFrames"] = _wakeWord->templateFrames();
+    _httpServer.send(200, "application/json", jsonEncode(result));
+}
+
+/// 登録用 WAV の最大サイズ (16kHz/16bit/mono で約12秒)
+static const size_t WAV_UPLOAD_MAX = 400 * 1024;
+
+void AppServer::_onWakeWordUpload() {
+    auto &upload = _httpServer.upload();
+    if (upload.status == UPLOAD_FILE_START) {
+        _wavUpload.clear();
+        _wavUploadOverflow = false;
+    } else if (upload.status == UPLOAD_FILE_WRITE) {
+        if (_wavUpload.size() + upload.currentSize <= WAV_UPLOAD_MAX) {
+            _wavUpload.insert(_wavUpload.end(), upload.buf, upload.buf + upload.currentSize);
+        } else {
+            _wavUploadOverflow = true;
+        }
+    }
+}
+
+void AppServer::_onWakeWordRegister() {
+    if (_wavUpload.empty()) {
+        _httpServer.send(400, "text/plain", "WAV file required (multipart/form-data)");
+        return;
+    }
+    if (_wavUploadOverflow) {
+        _wavUpload.clear();
+        _wavUpload.shrink_to_fit();
+        _httpServer.send(400, "text/plain", "file too large");
+        return;
+    }
+    auto error = _wakeWord->registerWav(_wavUpload.data(), _wavUpload.size());
+    _wavUpload.clear();
+    _wavUpload.shrink_to_fit();
+    if (error != nullptr) {
+        _httpServer.send(400, "text/plain", error);
+    } else {
+        _httpServer.send(200, "text/plain", "OK");
+    }
 }
 
 void AppServer::_onNotFound() {

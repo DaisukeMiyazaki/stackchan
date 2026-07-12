@@ -143,6 +143,11 @@ Here is the example of settings.
 - `chat.random.questions` [string[]] : Questions to ChatGPT for random speech
 - `chat.clock.hours` [int[]] : Speech hours list
 
+### Wakeword settings
+
+- `wakeword.enabled` [boolean] : Enable wakeword detection (Default: `true`)
+- `wakeword.threshold` [int] : Detection threshold; smaller is stricter (Default: `120`)
+
 ## API
 
 ### Speak API
@@ -167,4 +172,29 @@ curl -X POST "http://(Stack-chan's IP address)/speech" \
 ```shell
 curl -X POST "http://(Stack-chan's IP address)/chat" \
     -d "text=Say something"
+```
+
+### Wakeword API
+
+Register a wakeword by uploading a recorded WAV file (PCM 16kHz/16bit/mono).
+Once registered, the stack-chan keeps listening and reacts (expression + reply)
+when it hears the word. Detection distances are logged to serial monitor;
+adjust `wakeword.threshold` accordingly.
+
+```shell
+# Record on Linux (speak the wakeword once, about 2 seconds)
+arecord -f S16_LE -r 16000 -c 1 -d 2 wakeword.wav
+
+# Or convert an existing audio file
+ffmpeg -i input.wav -ar 16000 -ac 1 -sample_fmt s16 wakeword.wav
+
+# Register
+curl -F "file=@wakeword.wav" "http://(Stack-chan's IP address)/wakeword/register"
+
+# Status
+curl "http://(Stack-chan's IP address)/wakeword"
+
+# Disable / tune
+curl -X POST "http://(Stack-chan's IP address)/settings" -d "wakeword.enabled=false"
+curl -X POST "http://(Stack-chan's IP address)/settings" -d "wakeword.threshold=150"
 ```

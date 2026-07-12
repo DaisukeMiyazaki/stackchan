@@ -7,6 +7,7 @@
 
 #include "app/AppVoice.h"
 #include "lib/AudioFileSourceGoogleTranslateTts.h"
+#include "lib/AudioFileSourceHttp.h"
 #include "lib/AudioFileSourceTtsQuestVoicevox.h"
 #include "lib/AudioFileSourceVoiceText.h"
 #include "lib/AudioOutputM5Speaker.hpp"
@@ -98,6 +99,18 @@ bool AppVoice::isPlaying() {
 }
 
 /**
+ * Check if voice is playing or has pending messages
+ *
+ * @return true: busy, false: idle
+ */
+bool AppVoice::isBusy() {
+    xSemaphoreTake(_lock, portMAX_DELAY);
+    auto result = _audioMp3->isRunning() || !_speechMessages.empty();
+    xSemaphoreGive(_lock);
+    return result;
+}
+
+/**
  * Set voice name
  *
  * @param voiceName voice name
@@ -139,6 +152,17 @@ void AppVoice::speak(const String &text, const String &voiceName) {
 }
 
 /**
+ * Play audio (mp3) from URL
+ *
+ * @param url mp3 URL
+ */
+void AppVoice::playUrl(const String &url) {
+    xSemaphoreTake(_lock, portMAX_DELAY);
+    _speechMessages.push_back(std::make_unique<SpeechMessage>(url, "", true));
+    xSemaphoreGive(_lock);
+}
+
+/**
  * Stop speaking
  */
 void AppVoice::stopSpeak() {
@@ -171,9 +195,15 @@ void AppVoice::_loop() {
             xSemaphoreTake(_lock, portMAX_DELAY);
             _isRunning = true;
             xSemaphoreGive(_lock);
+            // wakeword 待ち受け側がマイクからスピーカーへ切り替えるのを待つ
+            for (int i = 0; i < 100 && !M5.Speaker.isEnabled(); i++) { delay(10); }
             M5.Speaker.setVolume(_settings->getVoiceVolume());
             M5.Speaker.setChannelVolume(_speakerChannel, _settings->getVoiceVolume());
-            if (strcasecmp(_settings->getVoiceService(), VOICE_SERVICE_TTS_QUEST_VOICEVOX) == 0) {
+            if (message->isUrl) {
+                // URL の音源をそのまま再生
+                _audioSource = std::unique_ptr<AudioFileSource>(
+                        new AudioFileSourceHttp(message->text.c_str()));
+            } else if (strcasecmp(_settings->getVoiceService(), VOICE_SERVICE_TTS_QUEST_VOICEVOX) == 0) {
                 // TTS QUEST VOICEVOX API
                 auto params = qsParse(_settings->getTtsQuestVoicevoxParams());
                 if (!message->voice.isEmpty()) {

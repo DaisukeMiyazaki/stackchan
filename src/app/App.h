@@ -10,6 +10,7 @@
 #include "app/AppSettings.h"
 #include "app/AppServer.h"
 #include "app/AppVoice.h"
+#include "app/AppWakeWord.h"
 
 class App {
 public:
@@ -19,13 +20,15 @@ public:
             std::shared_ptr<AppFace> face,
             std::shared_ptr<AppChat> chat,
             std::shared_ptr<AppServer> server,
-            std::shared_ptr<AppIr> ir
+            std::shared_ptr<AppIr> ir,
+            std::shared_ptr<AppWakeWord> wakeWord
     ) : _settings(std::move(settings)),
         _voice(std::move(voice)),
         _face(std::move(face)),
         _chat(std::move(chat)),
         _server(std::move(server)),
-        _ir(std::move(ir)) {};
+        _ir(std::move(ir)),
+        _wakeWord(std::move(wakeWord)) {};
 
     void setup();
 
@@ -38,6 +41,7 @@ private:
     std::shared_ptr<AppChat> _chat;
     std::shared_ptr<AppServer> _server;
     std::shared_ptr<AppIr> _ir;
+    std::shared_ptr<AppWakeWord> _wakeWord;
 
     void _onButtonA();
 

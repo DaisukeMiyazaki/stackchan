@@ -12,9 +12,12 @@
 
 class SpeechMessage {
 public:
-    SpeechMessage(String text, String voice) : text(std::move(text)), voice(std::move(voice)) {};
+    SpeechMessage(String text, String voice, bool isUrl = false)
+            : text(std::move(text)), voice(std::move(voice)), isUrl(isUrl) {};
     String text;
     String voice;
+    /// true のとき text を音源URLとして直接再生する
+    bool isUrl;
 };
 
 class AppVoice {
@@ -33,9 +36,14 @@ public:
 
     bool isPlaying();
 
+    /// 再生中または再生待ちのメッセージがあるか
+    bool isBusy();
+
     bool setVoiceName(const String &voiceName);
 
     void speak(const String &text, const String &voiceName);
+
+    void playUrl(const String &url);
 
     void stopSpeak();
 

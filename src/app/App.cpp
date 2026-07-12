@@ -73,11 +73,13 @@ void App::setup() {
     _chat->setup();
     _ir->setup();
     _server->setup();
+    _wakeWord->setup();
 
     // Start
     _voice->start();
     _face->start();
     _chat->start();
+    _wakeWord->start();
 }
 
 static const Box boxButtonA{0, 200, 106, 40};

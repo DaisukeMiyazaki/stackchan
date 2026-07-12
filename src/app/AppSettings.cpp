@@ -43,6 +43,11 @@ static const int CHAT_RANDOM_INTERVAL_MAX_DEFAULT = 120;
 static const char *CHAT_RANDOM_QUESTIONS_KEY = "chat.random.questions";
 static const char *CHAT_CLOCK_HOURS_KEY = "chat.clock.hours";
 
+static const char *WAKEWORD_ENABLED_KEY = "wakeword.enabled";
+static const bool WAKEWORD_ENABLED_DEFAULT = true;
+static const char *WAKEWORD_THRESHOLD_KEY = "wakeword.threshold";
+static const int WAKEWORD_THRESHOLD_DEFAULT = 120;
+
 bool AppSettings::init() {
     auto settings = sdLoadString(APP_SETTINGS_SD_PATH);
     if (settings != nullptr) {
@@ -192,4 +197,12 @@ bool AppSettings::isClockSpeakEnabled() {
 
 std::vector<int> AppSettings::getChatClockHours() {
     return getArray<int>(CHAT_CLOCK_HOURS_KEY);
+}
+
+bool AppSettings::isWakeWordEnabled() {
+    return get(WAKEWORD_ENABLED_KEY) | WAKEWORD_ENABLED_DEFAULT;
+}
+
+int AppSettings::getWakeWordThreshold() {
+    return get(WAKEWORD_THRESHOLD_KEY) | WAKEWORD_THRESHOLD_DEFAULT;
 }

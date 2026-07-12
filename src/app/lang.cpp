@@ -13,6 +13,7 @@ static const std::map<std::string, std::map<std::string, const char *>> clockSpe
                         {"chat_i_dont_understand", "I don't understand"},
                         {"chat_random_started", "The random speak mode started."},
                         {"chat_random_stopped", "The random speak mode stopped."},
+                        {"wakeword_reply", "Yes?"},
                 }
         },
         {
@@ -26,6 +27,7 @@ static const std::map<std::string, std::map<std::string, const char *>> clockSpe
                         {"chat_i_dont_understand", "わかりません"},
                         {"chat_random_started", "ひとりごと始めます"},
                         {"chat_random_stopped", "ひとりごとやめます"},
+                        {"wakeword_reply", "なあに?"},
                 }
         },
         {
@@ -39,6 +41,7 @@ static const std::map<std::string, std::map<std::string, const char *>> clockSpe
                         {"chat_i_dont_understand", "Nu înțeleg"},
                         {"chat_random_started", "Modul de vorbire aleatorie a început."},
                         {"chat_random_stopped", "Modul de vorbire aleatorie s-a oprit."},
+                        {"wakeword_reply", "Da?"},
                 }
         },
 };
