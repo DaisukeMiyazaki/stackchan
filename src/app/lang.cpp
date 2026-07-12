@@ -1,4 +1,5 @@
 #include <map>
+#include <string>
 
 static const std::map<std::string, std::map<std::string, const char *>> clockSpeechMap = {
         {

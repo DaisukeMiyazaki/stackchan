@@ -15,7 +15,7 @@
 bool connectNetwork(const char *ssid, const char *passphrase) {
     WiFi.disconnect();
     WiFi.softAPdisconnect(true);
-    WiFiClass::mode(WIFI_STA);
+    WiFi.mode(WIFI_STA);
 
     bool manualConfig = ssid != nullptr && passphrase != nullptr;
     if (manualConfig) {
@@ -27,7 +27,7 @@ bool connectNetwork(const char *ssid, const char *passphrase) {
     }
     M5.Display.print("Connecting");
     Serial.print("Connecting");
-    while (WiFiClass::status() != WL_CONNECTED) {
+    while (WiFi.status() != WL_CONNECTED) {
         M5.Display.print(".");
         Serial.print(".");
         delay(500);
@@ -39,13 +39,13 @@ bool connectNetwork(const char *ssid, const char *passphrase) {
     M5.Display.println("");
     Serial.println("");
 
-    if (WiFiClass::status() != WL_CONNECTED) {
+    if (WiFi.status() != WL_CONNECTED) {
         if (manualConfig) {
             return false;
         }
 
         // Try autoconfiguration by SmartConfig
-        WiFiClass::mode(WIFI_STA);
+        WiFi.mode(WIFI_STA);
         WiFi.beginSmartConfig();
         M5.Display.printf("SmartConfig: ");
         Serial.printf("SmartConfig: ");
@@ -66,7 +66,7 @@ bool connectNetwork(const char *ssid, const char *passphrase) {
         // Wait for connection
         M5.Display.println("Connecting");
         Serial.println("Connecting");
-        while (WiFiClass::status() != WL_CONNECTED) {
+        while (WiFi.status() != WL_CONNECTED) {
             delay(500);
             M5.Display.print(".");
             Serial.print(".");

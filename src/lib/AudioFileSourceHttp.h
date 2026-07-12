@@ -4,6 +4,8 @@
 #include <Arduino.h>
 #include <AudioFileSource.h>
 #include <HTTPClient.h>
+#include <WiFiClient.h>
+#include <WiFiClientSecure.h>
 
 class AudioFileSourceHttp : public AudioFileSource {
 public:
