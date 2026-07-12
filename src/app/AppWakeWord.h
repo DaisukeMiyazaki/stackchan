@@ -25,10 +25,11 @@ public:
     void start();
 
     /// WAV (16kHz/16bit/mono) から呼びかけ語を登録する
+    /// @param append true: 既存に追加、false: 置き換え
     /// @return エラーメッセージ (nullptr: 成功)
-    const char *registerWav(const uint8_t *data, size_t size);
+    const char *registerWav(const uint8_t *data, size_t size, bool append);
 
-    int templateFrames();
+    int templateWords();
 
 private:
     std::shared_ptr<AppSettings> _settings;

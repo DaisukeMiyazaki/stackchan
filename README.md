@@ -188,8 +188,11 @@ arecord -f S16_LE -r 16000 -c 1 -d 2 wakeword.wav
 # Or convert an existing audio file
 ffmpeg -i input.wav -ar 16000 -ac 1 -sample_fmt s16 wakeword.wav
 
-# Register
+# Register (replaces all registered words)
 curl -F "file=@wakeword.wav" "http://(Stack-chan's IP address)/wakeword/register"
+
+# Register additional words/voices (up to 8; recommended ~3 per person)
+curl -F "file=@wakeword2.wav" "http://(Stack-chan's IP address)/wakeword/register?append=1"
 
 # Status
 curl "http://(Stack-chan's IP address)/wakeword"

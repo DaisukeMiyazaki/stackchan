@@ -214,7 +214,7 @@ void AppServer::_onWakeWordStatus() {
     JsonDocument result;
     result["enabled"] = _settings->isWakeWordEnabled();
     result["threshold"] = _settings->getWakeWordThreshold();
-    result["templateFrames"] = _wakeWord->templateFrames();
+    result["words"] = _wakeWord->templateWords();
     _httpServer.send(200, "application/json", jsonEncode(result));
 }
 
@@ -246,7 +246,8 @@ void AppServer::_onWakeWordRegister() {
         _httpServer.send(400, "text/plain", "file too large");
         return;
     }
-    auto error = _wakeWord->registerWav(_wavUpload.data(), _wavUpload.size());
+    bool append = _httpServer.arg("append") == "1" || _httpServer.arg("append") == "true";
+    auto error = _wakeWord->registerWav(_wavUpload.data(), _wavUpload.size(), append);
     _wavUpload.clear();
     _wavUpload.shrink_to_fit();
     if (error != nullptr) {

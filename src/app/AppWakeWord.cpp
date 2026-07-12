@@ -28,16 +28,16 @@ void AppWakeWord::start() {
     );
 }
 
-const char *AppWakeWord::registerWav(const uint8_t *data, size_t size) {
+const char *AppWakeWord::registerWav(const uint8_t *data, size_t size, bool append) {
     xSemaphoreTake(_lock, portMAX_DELAY);
-    auto error = _detector.registerWav(data, size);
+    auto error = _detector.registerWav(data, size, append);
     xSemaphoreGive(_lock);
     return error;
 }
 
-int AppWakeWord::templateFrames() {
+int AppWakeWord::templateWords() {
     xSemaphoreTake(_lock, portMAX_DELAY);
-    auto result = _detector.templateFrames();
+    auto result = _detector.templateWords();
     xSemaphoreGive(_lock);
     return result;
 }

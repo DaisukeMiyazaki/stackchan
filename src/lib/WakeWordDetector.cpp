@@ -8,7 +8,10 @@
 
 /// File path for wakeword template
 static const char *TEMPLATE_PATH = "/wakeword.mfcc";
-static const uint32_t TEMPLATE_MAGIC = 0x31574b57; // "WKW1"
+static const uint32_t TEMPLATE_MAGIC = 0x32574b57; // "WKW2"
+
+/// 登録できる呼びかけ語の最大数
+static const int MAX_WORDS = 8;
 
 static const int NUM_MEL_FILTERS = 26;
 static const int FFT_BINS = WakeWordDetector::FRAME_SIZE / 2 + 1;
@@ -134,13 +137,13 @@ int WakeWordDetector::feed(const int16_t *samples) {
     float rms = _mfcc(frame, coeffs.data());
     _window.push_back(coeffs);
     _rms.push_back(rms);
-    size_t windowSize = _templates[0].size() * 3 / 2;
+    size_t windowSize = _maxTemplateSize() * 3 / 2;
     while (_window.size() > windowSize) {
         _window.pop_front();
         _rms.pop_front();
     }
 
-    if (_window.size() < _templates[0].size()) return -1;
+    if (_window.size() < _minTemplateSize()) return -1;
     if (++_frameCount % DETECT_INTERVAL != 0) return -1;
     if (*std::max_element(_rms.begin(), _rms.end()) < VAD_RMS) return -1;
     return (int) lroundf(_match() * 10);
@@ -166,9 +169,22 @@ float WakeWordDetector::_match() {
     return best;
 }
 
+size_t WakeWordDetector::_maxTemplateSize() {
+    size_t result = 0;
+    for (const auto &tmpl: _templates) result = std::max(result, tmpl.size());
+    return result;
+}
+
+size_t WakeWordDetector::_minTemplateSize() {
+    size_t result = SIZE_MAX;
+    for (const auto &tmpl: _templates) result = std::min(result, tmpl.size());
+    return result;
+}
+
 float WakeWordDetector::_matchOne(const std::vector<Frame> &tmpl, const float *mean) {
     int t = (int) tmpl.size();
     int w = (int) _window.size();
+    if (w < t) return INFINITY;
 
     // 部分列 DTW (ウィンドウ内の開始・終了位置は自由)
     std::vector<float> prev(w + 1, 0.0f), cur(w + 1);
@@ -192,7 +208,7 @@ void WakeWordDetector::reset() {
     _rms.clear();
 }
 
-const char *WakeWordDetector::registerWav(const uint8_t *data, size_t size) {
+const char *WakeWordDetector::registerWav(const uint8_t *data, size_t size, bool append) {
     // RIFF/WAVE ヘッダを解析
     if (size < 44 || memcmp(data, "RIFF", 4) != 0 || memcmp(data + 8, "WAVE", 4) != 0) {
         return "not a WAV file";
@@ -228,8 +244,20 @@ const char *WakeWordDetector::registerWav(const uint8_t *data, size_t size) {
     if (!fmtOk || samples == nullptr) {
         return "WAV must be PCM 16kHz/16bit/mono";
     }
+    if (!append) {
+        _templates.clear();
+        _numWords = 0;
+    } else if (_numWords >= MAX_WORDS) {
+        return "too many words registered";
+    }
     auto error = _buildTemplate(samples, numSamples);
     if (error != nullptr) {
+        if (!append) {
+            // 置き換えで途中失敗した場合は保存済みテンプレートに戻す
+            _templates.clear();
+            _numWords = 0;
+            loadTemplate();
+        }
         return error;
     }
     if (!_saveTemplate()) {
@@ -269,7 +297,6 @@ const char *WakeWordDetector::_buildTemplate(const int16_t *samples, size_t numS
     }
 
     // 半 hop ずつずらした系統を作り、フレーム位相ずれに強くする
-    std::vector<std::vector<Frame>> templates;
     for (size_t offset = 0; offset < HOP_SIZE; offset += HOP_SIZE / 2) {
         if ((size_t) last * HOP_SIZE + offset + FRAME_SIZE > numSamples) break;
         std::vector<Frame> frames;
@@ -284,11 +311,11 @@ const char *WakeWordDetector::_buildTemplate(const int16_t *samples, size_t numS
         for (auto &f: frames) {
             for (int k = 0; k < NUM_COEFFS; k++) f[k] -= mean[k];
         }
-        templates.push_back(std::move(frames));
+        _templates.push_back(std::move(frames));
     }
-    _templates = std::move(templates);
-    Serial.printf("wakeword: template built (%d frames, %d variants)\n",
-                  templateFrames(), (int) _templates.size());
+    _numWords++;
+    Serial.printf("wakeword: template built (%d words, %d sequences)\n",
+                  _numWords, (int) _templates.size());
     return nullptr;
 }
 
@@ -302,12 +329,14 @@ bool WakeWordDetector::_saveTemplate() {
     if (!f) {
         Serial.printf("ERROR: Failed to open SPIFFS for writing (path=%s)\n", TEMPLATE_PATH);
     } else {
-        uint16_t numVariants = _templates.size(), numFrames = templateFrames(), numCoeffs = NUM_COEFFS;
+        uint16_t numWords = _numWords, numSequences = _templates.size(), numCoeffs = NUM_COEFFS;
         f.write((uint8_t *) &TEMPLATE_MAGIC, sizeof(TEMPLATE_MAGIC));
-        f.write((uint8_t *) &numVariants, sizeof(numVariants));
-        f.write((uint8_t *) &numFrames, sizeof(numFrames));
+        f.write((uint8_t *) &numWords, sizeof(numWords));
+        f.write((uint8_t *) &numSequences, sizeof(numSequences));
         f.write((uint8_t *) &numCoeffs, sizeof(numCoeffs));
         for (const auto &tmpl: _templates) {
+            uint16_t numFrames = tmpl.size();
+            f.write((uint8_t *) &numFrames, sizeof(numFrames));
             for (const auto &frame: tmpl) {
                 f.write((uint8_t *) frame.data(), sizeof(float) * NUM_COEFFS);
             }
@@ -328,25 +357,39 @@ bool WakeWordDetector::loadTemplate() {
     File f = SPIFFS.open(TEMPLATE_PATH, "r");
     if (f && f.size() > 10) {
         uint32_t magic;
-        uint16_t numVariants, numFrames, numCoeffs;
+        uint16_t numWords, numSequences, numCoeffs;
         f.read((uint8_t *) &magic, sizeof(magic));
-        f.read((uint8_t *) &numVariants, sizeof(numVariants));
-        f.read((uint8_t *) &numFrames, sizeof(numFrames));
+        f.read((uint8_t *) &numWords, sizeof(numWords));
+        f.read((uint8_t *) &numSequences, sizeof(numSequences));
         f.read((uint8_t *) &numCoeffs, sizeof(numCoeffs));
         if (magic == TEMPLATE_MAGIC && numCoeffs == NUM_COEFFS
-            && numVariants >= 1 && numVariants <= 2
-            && numFrames >= MIN_TEMPLATE_FRAMES && numFrames <= MAX_TEMPLATE_FRAMES) {
-            std::vector<std::vector<Frame>> templates(numVariants, std::vector<Frame>(numFrames));
-            for (auto &tmpl: templates) {
-                for (auto &frame: tmpl) {
-                    f.read((uint8_t *) frame.data(), sizeof(float) * NUM_COEFFS);
+            && numWords >= 1 && numWords <= MAX_WORDS
+            && numSequences >= numWords && numSequences <= numWords * 2) {
+            std::vector<std::vector<Frame>> templates;
+            bool valid = true;
+            for (int i = 0; i < numSequences; i++) {
+                uint16_t numFrames;
+                if (f.read((uint8_t *) &numFrames, sizeof(numFrames)) != sizeof(numFrames)
+                    || numFrames < MIN_TEMPLATE_FRAMES || numFrames > MAX_TEMPLATE_FRAMES) {
+                    valid = false;
+                    break;
                 }
+                std::vector<Frame> tmpl(numFrames);
+                for (auto &frame: tmpl) {
+                    valid &= f.read((uint8_t *) frame.data(), sizeof(float) * NUM_COEFFS)
+                             == sizeof(float) * NUM_COEFFS;
+                }
+                templates.push_back(std::move(tmpl));
             }
-            _templates = std::move(templates);
-            Serial.printf("wakeword: template loaded (%d frames, %d variants)\n",
-                          templateFrames(), (int) _templates.size());
-            result = true;
-        } else {
+            if (valid) {
+                _templates = std::move(templates);
+                _numWords = numWords;
+                Serial.printf("wakeword: template loaded (%d words, %d sequences)\n",
+                              _numWords, (int) _templates.size());
+                result = true;
+            }
+        }
+        if (!result) {
             Serial.println("ERROR: Invalid wakeword template");
         }
     }
